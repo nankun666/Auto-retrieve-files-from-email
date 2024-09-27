@@ -1,0 +1,69 @@
+pip install pandas watchdog
+import os
+import pandas as pd
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import time
+
+# Define the folder path to watch
+folder_to_watch = "path_to_your_folder"
+
+# Define the names of the CSV files to compare
+csv_file_1 = 'file1.csv'
+csv_file_2 = 'file2.csv'
+
+# Custom event handler to track the new files
+class FileHandler(FileSystemEventHandler):
+    def __init__(self):
+        self.files_found = set()
+
+    def on_created(self, event):
+        # Check if a new file has been added and if it's one of the files to compare
+        if event.src_path.endswith(csv_file_1) or event.src_path.endswith(csv_file_2):
+            file_name = os.path.basename(event.src_path)
+            self.files_found.add(file_name)
+            print(f'{file_name} detected.')
+
+            # If both files are available, compare them
+            if csv_file_1 in self.files_found and csv_file_2 in self.files_found:
+                print('Both files found, comparing...')
+                compare_csv_files(os.path.join(folder_to_watch, csv_file_1), 
+                                  os.path.join(folder_to_watch, csv_file_2))
+
+# Function to compare two CSV files
+def compare_csv_files(file1, file2):
+    # Read the CSV files
+    df1 = pd.read_csv(file1)
+    df2 = pd.read_csv(file2)
+
+    # Compare the two DataFrames
+    if df1.equals(df2):
+        print("The files are identical.")
+    else:
+        print("The files are different. Here's the detailed comparison:")
+        # Find the differences
+        compare_result = df1.compare(df2)
+        print(compare_result)
+        # Save the comparison result to a CSV file
+        compare_result.to_csv('comparison_report.csv')
+        print("Comparison report saved as 'comparison_report.csv'.")
+
+# Set up the watchdog observer
+def start_monitoring():
+    event_handler = FileHandler()
+    observer = Observer()
+    observer.schedule(event_handler, folder_to_watch, recursive=False)
+    observer.start()
+    
+    print(f"Monitoring folder: {folder_to_watch}")
+    
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    
+    observer.join()
+
+if __name__ == '__main__':
+    start_monitoring()
