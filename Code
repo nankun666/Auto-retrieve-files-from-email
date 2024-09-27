@@ -2,6 +2,12 @@ pip install exchangelib
 from exchangelib import Credentials, Account, DELEGATE, Message
 import os
 
+def connect_to_outlook(username, password):
+    credentials = Credentials(username, password)
+    config = Configuration(server='outlook.office365.com', credentials=credentials)
+    account = Account(primary_smtp_address=username, credentials=credentials, autodiscover=True, access_type=DELEGATE)
+    return account
+
 # Setup credentials and connect to your Outlook account
 def connect_to_outlook(username, password):
     credentials = Credentials(username, password)
