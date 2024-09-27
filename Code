@@ -1,0 +1,49 @@
+pip install exchangelib
+from exchangelib import Credentials, Account, DELEGATE, Message
+import os
+
+# Setup credentials and connect to your Outlook account
+def connect_to_outlook(username, password):
+    credentials = Credentials(username, password)
+    account = Account(username, credentials=credentials, autodiscover=True, access_type=DELEGATE)
+    return account
+
+# Search inbox for unread emails with 'Trading file' in the subject
+def search_for_emails(account):
+    inbox = account.inbox.filter(subject__icontains='Trading file', is_read=False)  # Search by subject
+    return inbox
+
+# Download CSV attachments named 'JS Trading'
+def download_csv_attachments(account, download_folder="attachments"):
+    emails = search_for_emails(account)
+    
+    for item in emails:
+        if isinstance(item, Message):
+            # Process attachments if they exist
+            for attachment in item.attachments:
+                if isinstance(attachment, Message):
+                    continue  # Ignore email items in attachments
+                if attachment.name.startswith('JS Trading') and attachment.name.endswith('.csv'):  # Filter by name
+                    # Create folder to save attachments if it doesn't exist
+                    if not os.path.exists(download_folder):
+                        os.makedirs(download_folder)
+                    filepath = os.path.join(download_folder, attachment.name)
+                    with open(filepath, 'wb') as f:
+                        f.write(attachment.content)
+                    print(f'Downloaded {attachment.name} to {filepath}')
+            item.is_read = True  # Mark email as read
+            item.save()
+
+# Main function to run the workflow
+def main():
+    username = "your-email@outlook.com"  # Replace with your Outlook email address
+    password = "your-password"  # Replace with your password
+    
+    # Connect to Outlook
+    account = connect_to_outlook(username, password)
+    
+    # Download attachments
+    download_csv_attachments(account)
+
+if __name__ == "__main__":
+    main()
